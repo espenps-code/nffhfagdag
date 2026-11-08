@@ -123,7 +123,7 @@
   input.err,textarea.err{border-color:#c0492f;box-shadow:0 0 0 3px rgba(192,73,47,.15)}
 
   /* Valg av dager */
-  .choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .choices{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
   @media(max-width:560px){.choices{grid-template-columns:1fr}}
   .choice{position:relative}
   .choice input{position:absolute;opacity:0;width:1px;height:1px}
@@ -191,7 +191,7 @@
   <div class="steps">
     <b>Slik gjør du det</b>
     <ol>
-      <li>Meld deg på i Check-in, og se hvor stor egenandelen blir for dagene du har valgt.</li>
+      <li>Meld deg på i Check-in.</li>
       <li>Bestill eventuelt overnatting direkte hos Biologen.</li>
       <li>Fyll ut skjemaet under med beløpene, og last ned PDF-en.</li>
       <li>Send PDF-en til barneverntjenesten i kommunen som har ansvaret for fosterbarnet.</li>
@@ -263,11 +263,13 @@
       <div class="sec-head"><div class="num">4</div><h2>Deltakelse</h2></div>
       <div class="sec-body grid">
         <div class="field">
-          <span class="lbl" id="dagerLbl">Hvilke dager deltar dere?</span>
+          <span class="lbl" id="dagerLbl">Hvilken billett har dere valgt i Check-in?</span>
+          <span class="hint">Pris per person</span>
           <div class="choices" role="radiogroup" aria-labelledby="dagerLbl">
-            <div class="choice"><input type="radio" name="dager" id="dBegge" value="begge" checked><label for="dBegge">Begge dager<small>Lørdag og søndag</small></label></div>
-            <div class="choice"><input type="radio" name="dager" id="dLor" value="lor"><label for="dLor">Kun lørdag<small>20. februar</small></label></div>
-            <div class="choice"><input type="radio" name="dager" id="dSon" value="son"><label for="dSon">Kun søndag<small>21. februar</small></label></div>
+            <div class="choice"><input type="radio" name="billett" id="bBegge" value="begge" checked><label for="bBegge">Fagdager lørdag og søndag<small>1 350 kr</small></label></div>
+            <div class="choice"><input type="radio" name="billett" id="bLorM" value="lorMiddag"><label for="bLorM">Fagdag lørdag inkl. felles middag<small>990 kr</small></label></div>
+            <div class="choice"><input type="radio" name="billett" id="bLor" value="lor"><label for="bLor">Fagdag lørdag<small>490 kr</small></label></div>
+            <div class="choice"><input type="radio" name="billett" id="bSon" value="son"><label for="bSon">Fagdag søndag<small>490 kr</small></label></div>
           </div>
         </div>
         <div class="field" style="max-width:300px">
@@ -284,8 +286,8 @@
 
         <div class="grid two">
           <div class="field">
-            <label for="egenandel">Egenandel / deltakeravgift (kr)</label>
-            <span class="hint">Samlet beløp for alle som deltar. Du finner det i Check-in. Ta med 3-retters middag hvis dere har valgt det.</span>
+            <label for="egenandel">Deltakeravgift (kr)</label>
+            <span class="hint">Regnes ut fra billetten og antall deltakere – du kan endre det selv</span>
             <input type="number" id="egenandel" min="0" step="1" placeholder="0" inputmode="numeric">
           </div>
         </div>
@@ -329,16 +331,6 @@
 
         <p class="subhead">Annet</p>
         <div class="grid two">
-          <div class="field">
-            <label for="avlastning">Avlastning / barnepass (kr)</label>
-            <span class="hint">Hvis noen må passe barna mens dere er på samlingen</span>
-            <input type="number" id="avlastning" min="0" step="1" placeholder="0" inputmode="numeric">
-          </div>
-          <div class="field">
-            <label for="avlastningTekst">Kort om avlastningen</label>
-            <span class="hint">Valgfritt</span>
-            <input type="text" id="avlastningTekst" placeholder="F.eks. besteforeldre passer barna lørdag–søndag">
-          </div>
           <div class="field">
             <label for="andre">Andre utgifter (kr)</label>
             <span class="hint">La stå tom om det ikke er aktuelt</span>
@@ -396,7 +388,7 @@ const KM_RATE = 5.30;   // Statens sats for bil, gjelder 2026–2027
    Påmeldingsfristen vises i søknadsbrevet. La den stå tom ('')
    så lenge den ikke er bestemt – da skrives en generell setning.
    ========================================================= */
-const PAMELDINGSFRIST = '';   // f.eks. '15. januar 2027'
+const PAMELDINGSFRIST = 'onsdag 20. januar 2027';
 
 const ARR = 'Fosterhjemsforeningen Hordaland';
 
@@ -424,6 +416,13 @@ const INNHOLD = {
     '«Hva om barnet ikke er vanskelig?» – Mai Camilla Munkejord (sosialantropolog og forsker): barndomstraumer, nevrodivergens og selvfølelse, og hvordan vi kan se barnet bak atferden.'
   ]
 };
+/* Billetter i Check-in (pris per person) */
+const BILLETT = {
+  begge:     {navn:'Fagdager lørdag og søndag',          pris:1350, dager:'begge'},
+  lorMiddag: {navn:'Fagdag lørdag inkl. felles middag',  pris:990,  dager:'lor'},
+  lor:       {navn:'Fagdag lørdag',                      pris:490,  dager:'lor'},
+  son:       {navn:'Fagdag søndag',                      pris:490,  dager:'son'}
+};
 const DAGTEKST = {
   begge: 'lørdag 20. og søndag 21. februar 2027',
   lor:   'lørdag 20. februar 2027',
@@ -444,7 +443,11 @@ function nok(n, dec){ return fmt(n, dec) + ' kr'; }
 function nokAuto(n){ return (Math.round(n*100) % 100 === 0) ? nok(n,0) : nok(n,2); }
 function num(id){ const v = parseFloat(String($(id).value).replace(',','.')); return isNaN(v) ? 0 : Math.max(0, v); }
 function int(id){ return Math.round(num(id)); }
-function dager(){ const r = document.querySelector('input[name="dager"]:checked'); return r ? r.value : 'begge'; }
+function billett(){ const r = document.querySelector('input[name="billett"]:checked'); return BILLETT[r ? r.value : 'begge']; }
+function dager(){ return billett().dager; }
+function avgiftAuto(){ return billett().pris * int('antall'); }
+let avgiftManuell = false;
+function oppdaterAvgift(){ if(!avgiftManuell) $('egenandel').value = avgiftAuto(); }
 
 function norDate(v){
   if(!v) return '';
@@ -489,22 +492,25 @@ function calc(){
   const c = {
     egenandel: num('egenandel'), overnatting: num('overnatting'),
     km: int('km'), bom: num('bom'), kollektiv: num('kollektiv'),
-    avlastning: num('avlastning'), andre: num('andre')
+    andre: num('andre')
   };
   c.sumBil = c.km * KM_RATE;
-  c.total = c.egenandel + c.overnatting + c.sumBil + c.bom + c.kollektiv + c.avlastning + c.andre;
+  c.total = c.egenandel + c.overnatting + c.sumBil + c.bom + c.kollektiv + c.andre;
   return c;
 }
 
 /* Felles liste over linjer – brukes både i forhåndsvisning og PDF */
 function linjer(c, v){
   const L = [];
-  if(c.egenandel>0)   L.push(['Egenandel / deltakeravgift', c.egenandel]);
+  if(c.egenandel>0){
+    const b = billett(), n = int('antall');
+    const auto = !avgiftManuell && c.egenandel === avgiftAuto();
+    L.push(['Deltakeravgift – ' + b.navn + (auto ? ' ('+n+' × '+nok(b.pris)+')' : ''), c.egenandel]);
+  }
   if(c.overnatting>0) L.push(['Overnatting på Biologen' + (v && v.romTekst ? ' – '+v.romTekst : ''), c.overnatting]);
   if(c.km>0)          L.push(['Bil ('+fmt(c.km)+' km × 5,30 kr etter statens satser)', c.sumBil]);
   if(c.bom>0)         L.push(['Bom, ferje og parkering', c.bom]);
   if(c.kollektiv>0)   L.push(['Fly, buss eller båt', c.kollektiv]);
-  if(c.avlastning>0)  L.push(['Avlastning / barnepass' + (v && v.avlastningTekst ? ' – '+v.avlastningTekst : ''), c.avlastning]);
   if(c.andre>0)       L.push(['Andre utgifter' + (v && v.andreTekst ? ' – '+v.andreTekst : ''), c.andre]);
   return L;
 }
@@ -512,7 +518,7 @@ function linjer(c, v){
 /* ---------- Forhåndsvisning ---------- */
 function renderPreview(){
   const c = calc();
-  const v = { avlastningTekst: $('avlastningTekst').value.trim(), andreTekst: $('andreTekst').value.trim(), romTekst: romTekst() };
+  const v = { andreTekst: $('andreTekst').value.trim(), romTekst: romTekst() };
   const L = linjer(c, v);
   let h = '<h3>Beregnet sum</h3>';
   if(!L.length){
@@ -526,13 +532,16 @@ function renderPreview(){
 function esc(s){ return s.replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
 document.querySelectorAll('#skjema input').forEach(el => el.addEventListener('input', renderPreview));
 $('romtype').addEventListener('change', oppdaterOvernatting);
+document.querySelectorAll('input[name="billett"]').forEach(el => el.addEventListener('change', () => { avgiftManuell = false; oppdaterAvgift(); renderPreview(); }));
+$('egenandel').addEventListener('input', () => { avgiftManuell = (num('egenandel') !== avgiftAuto()); renderPreview(); });
 $('netter').addEventListener('input', oppdaterOvernatting);
-$('antall').addEventListener('input', () => { if(valgtRom()) oppdaterOvernatting(); });
+$('antall').addEventListener('input', () => { oppdaterAvgift(); if(valgtRom()) oppdaterOvernatting(); else renderPreview(); });
 /* Skriver man inn beløpet selv, settes romvalget til «Annet» */
 $('overnatting').addEventListener('input', () => {
   const r = valgtRom();
   if(r && num('overnatting') !== romPris(r) * int('netter')) $('romtype').value = 'annet';
 });
+oppdaterAvgift();
 renderPreview();
 
 /* ---------- Validering ---------- */
@@ -569,7 +578,6 @@ function lastNedPDF(){
     mottaker: $('mottaker').value.trim(),
     barnNavn: $('barnNavn').value.trim(),
     barnFodt: norDate($('barnFodt').value),
-    avlastningTekst: $('avlastningTekst').value.trim(),
     andreTekst: $('andreTekst').value.trim(),
     romTekst: romTekst(),
     sted: $('sted').value.trim(),
@@ -655,10 +663,10 @@ function lastNedPDF(){
 
   heading('Tid, sted og deltakelse');
   para('Tid og sted: 20.–21. februar 2027, Biologen på Herdla.', {lh:5.4});
-  para(JEG+' deltar '+DAGTEKST[d]+'.', {lh:5.4});
+  para(JEG+' deltar '+DAGTEKST[d]+' (billett: '+billett().navn.toLowerCase()+').', {lh:5.4});
   para('Antall fosterforeldre som deltar: '+antall+'.', {lh:5.4});
   y += 2;
-  para(ARR+' dekker selv deler av kostnadene ved arrangementet. Egenandelen er det deltakerne betaler selv. Overnatting bestilles og betales av den enkelte direkte hos hotellet.', {size:9.5, lh:4.8, color:SOFT});
+  para(ARR+' dekker selv deler av kostnadene ved arrangementet. Deltakeravgiften er det deltakerne betaler selv. Overnatting bestilles og betales av den enkelte direkte hos hotellet.', {size:9.5, lh:4.8, color:SOFT});
 
   /* ---------- Kostnadstabell ---------- */
   heading('Oppsummering av utgifter');
